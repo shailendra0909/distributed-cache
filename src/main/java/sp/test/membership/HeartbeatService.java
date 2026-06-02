@@ -23,7 +23,7 @@ public class HeartbeatService {
     public void start() {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             long currentHB = self.incrementHeartBeat();
-            log.info("heart beat for the server-id:" + self.getNodeId() + " beats:" + self.getHeartBeat());
+           // log.info("heart beat for the server-id:" + self.getNodeId() + " beats:" + self.getHeartBeat());
         }, 1, 1, TimeUnit.SECONDS);
     }
 
