@@ -13,11 +13,13 @@ public class HelloMessage {
     private String host;
     private Integer port;
     private long heartbeat;
+    private long incarnation;
 
-    public HelloMessage(String nodeId, String host, Integer port, long heartbeat) {
+    public HelloMessage(String nodeId, String host, Integer port, long heartbeat, long incarnation) {
         this.nodeId = nodeId;
         this.host = host;
         this.port = port;
         this.heartbeat = heartbeat;
+        this.incarnation = incarnation;
     }
 }

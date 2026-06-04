@@ -3,7 +3,9 @@ package sp.test.membership;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import sp.test.transport.UDPListener;
+import sp.test.transport.UDPSender;
 import sp.test.transport.message.HelloMessage;
+import sp.test.transport.message.MembershipMessage;
 
 @Slf4j
 public class CacheNode {
@@ -14,14 +16,16 @@ public class CacheNode {
     private HeartbeatService heartbeatService;
     private MembershipLogger membershipLogger;
     private UDPListener udpListener;
+    private UDPSender udpSender;
     private NodeInfo self;
 
-    public CacheNode(NodeInfo self) {
+    public CacheNode(NodeInfo self, NodeInfo seed) {
         this.self = self;
         this.membershipTable = new MembershipTable();
         this.heartbeatService = new HeartbeatService(self);
         this.membershipLogger = new MembershipLogger(membershipTable);
-        this.udpListener = new UDPListener(self.getNodeAddress().port(), this::onMessage);
+        this.udpListener = new UDPListener(self.getNodeAddress().getPort(), this::onMessage);
+        this.udpSender = new UDPSender(membershipTable,  self, seed);
     }
 
     public void start() {
@@ -29,19 +33,15 @@ public class CacheNode {
         this.heartbeatService.start();
         this.membershipLogger.print();
         this.udpListener.start();
+        this.udpSender.start();
     }
 
     private void onMessage(String json) {
         try {
-            HelloMessage msg = objectMapper.readValue(json, HelloMessage.class);
-
-            NodeInfo remoteNode = new NodeInfo(new NodeAddress(msg.getHost(), msg.getPort()), msg.getNodeId());
-
-            while (remoteNode.getHeartBeat().get() < msg.getHeartbeat()) {
-                remoteNode.incrementHeartBeat();
+            MembershipMessage msg = objectMapper.readValue(json, MembershipMessage.class);
+            for(NodeInfo remoteNode: msg.getNodes()){
+              membershipTable.merge(remoteNode);
             }
-
-            membershipTable.usert(remoteNode);
         } catch (Exception e) {
             log.error("error in onMessage:", e);
         }

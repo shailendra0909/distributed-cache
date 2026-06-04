@@ -12,11 +12,12 @@ Represent mata-data related to a node.
 @Setter
 @ToString
 @EqualsAndHashCode
+@NoArgsConstructor
 public class NodeInfo {
     private NodeAddress nodeAddress;
     private String nodeId;
     private final AtomicInteger heartBeat = new AtomicInteger(0);
-    private volatile long incarnation = 0; //  When a node restarts or recovers, it enters a new incarnation.
+    private volatile long incarnation = System.currentTimeMillis(); // the version when node started/restarted
     private volatile Status status = Status.ALIVE;
 
     public NodeInfo(NodeAddress nodeAddress, String nodeId) {
@@ -26,5 +27,9 @@ public class NodeInfo {
 
     public long incrementHeartBeat(){
         return heartBeat.incrementAndGet();
+    }
+
+    public void setHeartBeat(int heartBeat){
+        this.getHeartBeat().set(heartBeat);
     }
 }
