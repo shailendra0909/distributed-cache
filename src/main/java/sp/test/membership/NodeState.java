@@ -6,5 +6,13 @@ package sp.test.membership;
 public enum NodeState {
     ALIVE,
     SUSPECT,
-    DEAD
+    DEAD;
+
+    public int precedence(){
+       return switch (this){
+            case DEAD -> 3;
+            case SUSPECT -> 2;
+            case ALIVE -> 1;
+        };
+    }
 }

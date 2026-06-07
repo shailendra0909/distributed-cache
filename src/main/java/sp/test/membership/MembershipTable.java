@@ -45,7 +45,7 @@ public class MembershipTable {
             return;
         }
 
-        if (membershipInfo.getIncarnation() > oldNodeInfo.getIncarnation()) {
+        if (oldNodeInfo.getIncarnation() < membershipInfo.getIncarnation()) {
             updateMembershipInfo(oldNodeInfo, membershipInfo);
             return;
         }
@@ -56,8 +56,17 @@ public class MembershipTable {
         }
         if (membershipInfo.getHeartbeat() > oldNodeInfo.getHeartBeat().get()) {
             updateMembershipInfo(oldNodeInfo, membershipInfo);
+            return;
         }
+        // if incarnation and heartbeat is same, DEAD -> SUSPECTED -> ALIVE
+        if (membershipInfo.getHeartbeat() == oldNodeInfo.getHeartBeat().get() && membershipInfo.getNodeState() != oldNodeInfo.getStatus()) {
 
+            if (oldNodeInfo.getStatus().precedence() > membershipInfo.getNodeState().precedence()) {
+                // do nothing
+            } else {
+                oldNodeInfo.setStatus(membershipInfo.getNodeState());
+            }
+        }
     }
 
     private void updateMembershipInfo(NodeInfo oldNodeInfo, MembershipInfo membershipInfo) {
