@@ -25,6 +25,7 @@ public class App {
 
         NodeAddress nodeAddress = new NodeAddress(host, Integer.parseInt(port));
         NodeInfo self = new NodeInfo(nodeAddress, nodeId);
+        self.setLastUpdatedTime(System.currentTimeMillis());
 
         NodeAddress otherAddress  = new NodeAddress(seedHost, Integer.parseInt(seedPort));
         NodeInfo seed = new NodeInfo(otherAddress, null);

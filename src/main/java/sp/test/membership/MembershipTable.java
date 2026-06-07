@@ -28,28 +28,56 @@ public class MembershipTable {
         return members.size();
     }
 
-    public void merge(NodeInfo nodeInfo) {
+    public void merge(MembershipInfo membershipInfo) {
+
+        NodeInfo oldNodeInfo = members.get(membershipInfo.getNodeId());
+
+        // its new node
+        if (oldNodeInfo == null) {
+            members.put(membershipInfo.getNodeId(), createNodeInfo(membershipInfo));
+            return;
+        }
+
+        if (oldNodeInfo.getIncarnation() == membershipInfo.getIncarnation()
+                && NodeState.DEAD.equals(oldNodeInfo.getStatus())) {
+            // do not process,
+            // let other node come up with new incarnation number
+            return;
+        }
+
+        if (membershipInfo.getIncarnation() > oldNodeInfo.getIncarnation()) {
+            updateMembershipInfo(oldNodeInfo, membershipInfo);
+            return;
+        }
+
+        if (oldNodeInfo.getIncarnation() > membershipInfo.getIncarnation()) {
+            // old msg; do not process it
+            return;
+        }
+        if (membershipInfo.getHeartbeat() > oldNodeInfo.getHeartBeat().get()) {
+            updateMembershipInfo(oldNodeInfo, membershipInfo);
+        }
+
+    }
+
+    private void updateMembershipInfo(NodeInfo oldNodeInfo, MembershipInfo membershipInfo) {
+        oldNodeInfo.setHeartBeat(membershipInfo.getHeartbeat());
+        oldNodeInfo.setStatus(membershipInfo.getNodeState());
+        oldNodeInfo.setIncarnation(membershipInfo.getIncarnation());
+
+        oldNodeInfo.setLastUpdatedTime(System.currentTimeMillis());
+    }
+
+    private NodeInfo createNodeInfo(MembershipInfo membershipInfo) {
+        NodeInfo nodeInfo = new NodeInfo();
+        nodeInfo.setNodeId(membershipInfo.getNodeId());
+        nodeInfo.setHeartBeat(membershipInfo.getHeartbeat());
+        nodeInfo.setNodeAddress(new NodeAddress(membershipInfo.getHost(), membershipInfo.getPort()));
+        nodeInfo.setIncarnation(membershipInfo.getIncarnation());
+        nodeInfo.setStatus(membershipInfo.getNodeState());
+
         nodeInfo.setLastUpdatedTime(System.currentTimeMillis());
 
-        NodeInfo oldNodeInfo = members.get(nodeInfo.getNodeId());
-        if(oldNodeInfo.getIncarnation() == nodeInfo.getIncarnation() && NodeState.DEAD.equals(oldNodeInfo.getStatus())){
-            // do not process,
-            // let other node with new incarnation number
-        }
-        if (oldNodeInfo == null) {
-            members.put(nodeInfo.getNodeId(), nodeInfo);
-        } else {
-            if(nodeInfo.getIncarnation()> oldNodeInfo.getIncarnation()){
-                members.put(nodeInfo.getNodeId(), nodeInfo);
-            }else if(oldNodeInfo.getIncarnation() > nodeInfo.getIncarnation()){
-                // old msg; do not process it
-            }
-            // incarnation is same; a) higher hb is updated; b) marked alive if suspected
-            else if(nodeInfo.getHeartBeat().get() > oldNodeInfo.getHeartBeat().get()) {
-                oldNodeInfo.setHeartBeat(nodeInfo.getHeartBeat().get());
-                oldNodeInfo.setLastUpdatedTime(System.currentTimeMillis());
-                oldNodeInfo.setStatus(NodeState.ALIVE);
-            }
-        }
+        return nodeInfo;
     }
 }

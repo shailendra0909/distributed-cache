@@ -41,7 +41,7 @@ public class CacheNode {
     private void onMessage(String json) {
         try {
             MembershipMessage msg = objectMapper.readValue(json, MembershipMessage.class);
-            for(NodeInfo remoteNode: msg.getNodes()){
+            for(MembershipInfo remoteNode: msg.getMembershipInfos()){
               membershipTable.merge(remoteNode);
             }
         } catch (Exception e) {

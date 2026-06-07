@@ -3,6 +3,7 @@ package sp.test.transport;
 import lombok.extern.slf4j.Slf4j;
 import sp.test.CommonUtils;
 import sp.test.executers.ServiceExecutors;
+import sp.test.membership.MembershipInfo;
 import sp.test.membership.MembershipTable;
 import sp.test.membership.NodeInfo;
 import sp.test.transport.message.MembershipMessage;
@@ -75,9 +76,24 @@ public class UDPSender {
 
     private MembershipMessage getMembershipMessage(MembershipTable membershipTable) {
         MembershipMessage message = new MembershipMessage();
-        List<NodeInfo> nodeInfos = membershipTable.getAllNode().stream().toList();
-        message.setNodes(nodeInfos);
+        List<MembershipInfo> membershipInfos = membershipTable.getAllNode().stream()
+                .map(nodeInfo -> getMembershipInfo(nodeInfo)).toList();
+        message.setMembershipInfos(membershipInfos);
         return message;
+    }
+
+    private MembershipInfo getMembershipInfo(NodeInfo nodeInfo) {
+        MembershipInfo membershipInfo = new MembershipInfo();
+
+        membershipInfo.setNodeId(nodeInfo.getNodeId());
+        membershipInfo.setHeartbeat(nodeInfo.getHeartBeat().get());
+        membershipInfo.setIncarnation(nodeInfo.getIncarnation());
+        membershipInfo.setHost(nodeInfo.getNodeAddress().getHost());
+        membershipInfo.setPort(nodeInfo.getNodeAddress().getPort());
+        membershipInfo.setNodeState(nodeInfo.getStatus());
+
+        return membershipInfo;
+
     }
 
     private String getRandomKey(MembershipTable membershipTable) {

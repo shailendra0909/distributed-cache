@@ -11,7 +11,7 @@ public class FailureDetector implements Runnable {
     private MembershipTable membershipTable;
     private NodeInfo self;
     private long suspectedTimeoutMs = 5 * 1000; //sec * 1000
-    private long deadTimeoutMs = 3 * 1000;//sec * 1000
+    private long deadTimeoutMs = suspectedTimeoutMs + 3 * 1000;//sec * 1000
 
     FailureDetector(MembershipTable membershipTable, NodeInfo self) {
         this.membershipTable = membershipTable;
@@ -25,7 +25,7 @@ public class FailureDetector implements Runnable {
                 .orElse(new ArrayList<>())
                 .stream()
                 .forEach((nodeInfo) -> {
-                    if (nodeInfo.equals(self)) {
+                    if (nodeInfo.getNodeId().equals(self.getNodeId())) {
                         return;
                     }
                     if (NodeState.ALIVE.equals(nodeInfo.getStatus()) && getAge(nodeInfo) > suspectedTimeoutMs) {
