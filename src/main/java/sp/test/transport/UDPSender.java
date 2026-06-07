@@ -1,8 +1,8 @@
 package sp.test.transport;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import sp.test.CommonUtils;
+import sp.test.executers.ServiceExecutors;
 import sp.test.membership.MembershipTable;
 import sp.test.membership.NodeInfo;
 import sp.test.transport.message.MembershipMessage;
@@ -12,8 +12,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -30,11 +28,10 @@ public class UDPSender {
     }
 
     public void start() {
-        if(!seedUsed){
+        if (!seedUsed) {
             sendInitialMessage(seed);
-        }else {
-            ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-            service.scheduleWithFixedDelay(this::send, 1, 4, TimeUnit.SECONDS);
+        } else {
+            ServiceExecutors.getInstance().scheduleWithFixedDelay(this::send, 1, 4, TimeUnit.SECONDS);
         }
     }
 
@@ -47,7 +44,7 @@ public class UDPSender {
     public void send() {
         //choose random node to gossip with
         //send full membership table
-        if(membershipTable.getSize()==1){
+        if (membershipTable.getSize() == 1) {
             try {
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
@@ -55,14 +52,16 @@ public class UDPSender {
             }
         }
         String randomId = getRandomKey(membershipTable);
-        if(randomId.equals(self.getNodeId())){
+        if (randomId.equals(self.getNodeId())) {
             return;
         }
         NodeInfo randomNode = this.membershipTable.getNode(randomId);
         send(randomNode);
     }
-
-    private void send(NodeInfo nodeInfo){
+    /*
+        send its membership tables (including itself) to seed node.
+     */
+    private void send(NodeInfo nodeInfo) {
         try (DatagramSocket datagramSocket = new DatagramSocket()) {
             MembershipMessage message = getMembershipMessage(membershipTable);
             byte[] payload = CommonUtils.objectMapper.writeValueAsBytes(message);
@@ -83,9 +82,7 @@ public class UDPSender {
 
     private String getRandomKey(MembershipTable membershipTable) {
         List<String> keys = membershipTable.getAllNode().stream().map(nodeInfo -> nodeInfo.getNodeId()).toList();
-
-            int index = new Random().nextInt(keys.size());
-
+        int index = new Random().nextInt(keys.size());
         return keys.get(index);
     }
 

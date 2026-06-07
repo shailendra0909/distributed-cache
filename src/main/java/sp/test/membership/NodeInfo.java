@@ -18,7 +18,8 @@ public class NodeInfo {
     private String nodeId;
     private final AtomicInteger heartBeat = new AtomicInteger(0);
     private volatile long incarnation = System.currentTimeMillis(); // the version when node started/restarted
-    private volatile Status status = Status.ALIVE;
+    private volatile NodeState status = NodeState.ALIVE;
+    private volatile long lastUpdatedTime;
 
     public NodeInfo(NodeAddress nodeAddress, String nodeId) {
         this.nodeAddress = nodeAddress;
