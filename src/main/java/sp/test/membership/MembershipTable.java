@@ -47,13 +47,14 @@ public class MembershipTable {
                 // if incarnation and heartbeat is same, DEAD -> SUSPECTED -> ALIVE
                 if (nodeInfo.getStatus().precedence() < membershipInfo.getNodeState().precedence()) {
                     // do nothing, until it's self
-                    if ((NodeState.DEAD.equals(membershipInfo.getNodeState()) || NodeState.SUSPECT.equals(membershipInfo.getNodeState()))
-                            && self.getNodeId().equals(membershipInfo.getNodeId())) {
+                    if (self.getNodeId().equals(membershipInfo.getNodeId()) &&
+                            (NodeState.DEAD.equals(membershipInfo.getNodeState())
+                            || NodeState.SUSPECT.equals(membershipInfo.getNodeState()))) {
                         self.setIncarnation(System.currentTimeMillis());
                         self.setStatus(NodeState.ALIVE);
-                    } else {
-                        nodeInfo.setStatus(membershipInfo.getNodeState());
+                        self.incrementHeartBeat();
                     }
+                    nodeInfo.setStatus(membershipInfo.getNodeState());
                 }
             }
             return nodeInfo;
