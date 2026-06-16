@@ -21,7 +21,7 @@ public class CacheNode {
 
     public CacheNode(NodeInfo self, NodeInfo seed) {
         this.self = self;
-        this.membershipTable = new MembershipTable();
+        this.membershipTable = new MembershipTable(self);
         this.heartbeatService = new HeartbeatService(self);
         this.membershipLogger = new MembershipLogger(membershipTable);
         this.udpListener = new UDPListener(self.getNodeAddress().getPort(), this::onMessage);
@@ -30,7 +30,6 @@ public class CacheNode {
     }
 
     public void start() {
-        this.membershipTable.usert(self);
         this.heartbeatService.start();
         this.membershipLogger.print();
         this.udpListener.start();

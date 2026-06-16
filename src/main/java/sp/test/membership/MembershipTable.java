@@ -11,9 +11,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MembershipTable {
     private final ConcurrentHashMap<String, NodeInfo> members =
             new ConcurrentHashMap<>();
+    private NodeInfo self;
 
-    public void usert(NodeInfo nodeInfo) {
-        members.put(nodeInfo.getNodeId(), nodeInfo);
+    public MembershipTable(NodeInfo self) {
+        this.self = self;
+        members.put(self.getNodeId(), self);
     }
 
     public NodeInfo getNode(String nodeId) {
@@ -29,44 +31,33 @@ public class MembershipTable {
     }
 
     public void merge(MembershipInfo membershipInfo) {
-
-        NodeInfo oldNodeInfo = members.get(membershipInfo.getNodeId());
-
-        // its new node
-        if (oldNodeInfo == null) {
-            members.put(membershipInfo.getNodeId(), createNodeInfo(membershipInfo));
-            return;
-        }
-
-        if (oldNodeInfo.getIncarnation() == membershipInfo.getIncarnation()
-                && NodeState.DEAD.equals(oldNodeInfo.getStatus())) {
-            // do not process,
-            // let other node come up with new incarnation number
-            return;
-        }
-
-        if (oldNodeInfo.getIncarnation() < membershipInfo.getIncarnation()) {
-            updateMembershipInfo(oldNodeInfo, membershipInfo);
-            return;
-        }
-
-        if (oldNodeInfo.getIncarnation() > membershipInfo.getIncarnation()) {
-            // old msg; do not process it
-            return;
-        }
-        if (membershipInfo.getHeartbeat() > oldNodeInfo.getHeartBeat().get()) {
-            updateMembershipInfo(oldNodeInfo, membershipInfo);
-            return;
-        }
-        // if incarnation and heartbeat is same, DEAD -> SUSPECTED -> ALIVE
-        if (membershipInfo.getHeartbeat() == oldNodeInfo.getHeartBeat().get() && membershipInfo.getNodeState() != oldNodeInfo.getStatus()) {
-
-            if (oldNodeInfo.getStatus().precedence() > membershipInfo.getNodeState().precedence()) {
+        members.compute(membershipInfo.getNodeId(), (key, nodeInfo) -> {
+            // if it is new node
+            if (nodeInfo == null) {
+                return createNodeInfo(membershipInfo);
+            } else if (nodeInfo.getIncarnation() < membershipInfo.getIncarnation()) {
+                updateMembershipInfo(nodeInfo, membershipInfo);
+            } else if (nodeInfo.getIncarnation() > membershipInfo.getIncarnation()) {
+                // old membership msg; do not process it
+            } else if (membershipInfo.getHeartbeat() > nodeInfo.getHeartBeat().get()) {
+                updateMembershipInfo(nodeInfo, membershipInfo);
+            } else if (membershipInfo.getHeartbeat() < nodeInfo.getHeartBeat().get()) {
                 // do nothing
-            } else {
-                oldNodeInfo.setStatus(membershipInfo.getNodeState());
+            } else if (membershipInfo.getHeartbeat() == nodeInfo.getHeartBeat().get() && membershipInfo.getNodeState() != nodeInfo.getStatus()) {
+                // if incarnation and heartbeat is same, DEAD -> SUSPECTED -> ALIVE
+                if (nodeInfo.getStatus().precedence() < membershipInfo.getNodeState().precedence()) {
+                    // do nothing, until it's self
+                    if ((NodeState.DEAD.equals(membershipInfo.getNodeState()) || NodeState.SUSPECT.equals(membershipInfo.getNodeState()))
+                            && self.getNodeId().equals(membershipInfo.getNodeId())) {
+                        self.setIncarnation(System.currentTimeMillis());
+                        self.setStatus(NodeState.ALIVE);
+                    } else {
+                        nodeInfo.setStatus(membershipInfo.getNodeState());
+                    }
+                }
             }
-        }
+            return nodeInfo;
+        });
     }
 
     private void updateMembershipInfo(NodeInfo oldNodeInfo, MembershipInfo membershipInfo) {

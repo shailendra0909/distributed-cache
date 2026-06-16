@@ -3,9 +3,9 @@ package sp.test.membership;
 import sp.test.executers.ServiceExecutors;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class FailureDetector implements Runnable {
     private MembershipTable membershipTable;
@@ -20,20 +20,31 @@ public class FailureDetector implements Runnable {
 
     @Override
     public void run() {
-        Optional.ofNullable(this.membershipTable)
+        List<MembershipInfo> membershipInfoList = Optional.ofNullable(this.membershipTable)
                 .map(membershipTable -> membershipTable.getAllNode())
                 .orElse(new ArrayList<>())
                 .stream()
-                .forEach((nodeInfo) -> {
-                    if (nodeInfo.getNodeId().equals(self.getNodeId())) {
-                        return;
-                    }
-                    if (NodeState.ALIVE.equals(nodeInfo.getStatus()) && getAge(nodeInfo) > suspectedTimeoutMs) {
-                        nodeInfo.setStatus(NodeState.SUSPECT);
-                    } else if (NodeState.SUSPECT.equals(nodeInfo.getStatus()) && getAge(nodeInfo) > deadTimeoutMs) {
-                        nodeInfo.setStatus(NodeState.DEAD);
-                    }
-                });
+                .map(nodeInfo -> createMemberShipInfo(nodeInfo))
+                .collect(Collectors.toList());
+
+        Optional.ofNullable(membershipInfoList)
+                .orElse(new ArrayList<>())
+                .stream()
+                .forEach(membershipInfo -> membershipTable.merge(membershipInfo));
+    }
+
+    private MembershipInfo createMemberShipInfo(NodeInfo nodeInfo) {
+        MembershipInfo membershipInfo = new MembershipInfo();
+        membershipInfo.setHost(nodeInfo.getNodeAddress().getHost());
+        membershipInfo.setPort(nodeInfo.getNodeAddress().getPort());
+        membershipInfo.setIncarnation(nodeInfo.getIncarnation());
+        membershipInfo.setHeartbeat(nodeInfo.getHeartBeat().get());
+        if (NodeState.ALIVE.equals(nodeInfo.getStatus()) && getAge(nodeInfo) > suspectedTimeoutMs) {
+            membershipInfo.setNodeState(NodeState.SUSPECT);
+        } else if (NodeState.SUSPECT.equals(nodeInfo.getStatus()) && getAge(nodeInfo) > deadTimeoutMs)
+            membershipInfo.setNodeState(NodeState.DEAD);
+
+        return membershipInfo;
     }
 
     private long getAge(NodeInfo nodeInfo) {
